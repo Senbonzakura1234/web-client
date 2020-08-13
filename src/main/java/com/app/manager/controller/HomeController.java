@@ -4,6 +4,8 @@ import com.app.manager.model.midware_model.ListProduct;
 import com.app.manager.model.midware_model.ProductModel;
 import com.app.manager.model.midware_model.SellModel;
 import com.app.manager.model.returnResult.JsonResult;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -18,6 +20,9 @@ import org.springframework.web.client.RestTemplate;
 
 @Controller
 public class HomeController {
+    private static final String host = "http://localhost:8080/api/product";
+
+
     @GetMapping({"/","/list"})
     public String list(Model model) {
         var entity = new HttpEntity<>("", new HttpHeaders());
@@ -25,8 +30,7 @@ public class HomeController {
 
         try {
             var data = restTemplate
-                    .exchange("http://localhost:8080/api/product",
-                            HttpMethod.GET, entity, ListProduct.class).getBody();
+                    .exchange(host, HttpMethod.GET, entity, ListProduct.class).getBody();
             if (data != null) model.addAttribute("products", data.getProductModels());
         } catch (RestClientException e) {
             e.printStackTrace();
@@ -59,8 +63,7 @@ public class HomeController {
 
         try {
             var data = restTemplate
-                    .exchange("http://localhost:8080/api/product/add",
-                            HttpMethod.POST, entity, JsonResult.class).getBody();
+                    .exchange(host + "/add", HttpMethod.POST, entity, JsonResult.class).getBody();
             if (data != null && data.isSuccess()){
                 return "redirect:/";
             }else {
@@ -83,19 +86,29 @@ public class HomeController {
 
         try {
             var data = restTemplate
-                    .exchange("http://localhost:8080/api/product/detail?id=" + id,
-                            HttpMethod.GET, entity, ProductModel.class).getBody();
+                    .exchange(host + "/detail?id=" + id,
+                            HttpMethod.GET, entity, String.class).getBody();
             if (data != null) {
-                model.addAttribute("name", data.getName());
-                if(data.getAmount() <= 0)  return "redirect:/";
-                return "sell";
+                if(data.equals("ResourceNotFoundException"))
+                    throw new ResourceNotFoundException();
+
+                ObjectMapper mapper = new ObjectMapper();
+                try {
+                    var dataDeserialize  = mapper.readValue(data, ProductModel.class);
+                    model.addAttribute("name", dataDeserialize.getName());
+                    if(dataDeserialize.getAmount() <= 0)  return "redirect:/";
+                    return "sell";
+                } catch (JsonProcessingException e) {
+                    e.printStackTrace();
+                    throw new InternalServerErrorException();
+                }
             }else {
-                throw new ResourceNotFoundException();
+                throw new InternalServerErrorException();
             }
         } catch (RestClientException e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
-            throw new InternalServerError();
+            throw new InternalServerErrorException();
         }
     }
 
@@ -114,7 +127,7 @@ public class HomeController {
 
         try {
             var data = restTemplate
-                    .exchange("http://localhost:8080/api/product/sell",
+                    .exchange(host + "/sell",
                             HttpMethod.POST, entity, JsonResult.class).getBody();
             if (data != null && data.isSuccess()){
                 return "redirect:/";
@@ -128,13 +141,15 @@ public class HomeController {
             return "sell";
         }
     }
+
+
     @ResponseStatus(value = HttpStatus.NOT_FOUND)
     public static class ResourceNotFoundException extends RuntimeException {
 
     }
 
     @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-    public static class InternalServerError extends RuntimeException {
+    public static class InternalServerErrorException extends RuntimeException {
 
     }
 
