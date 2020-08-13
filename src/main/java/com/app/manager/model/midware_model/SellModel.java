@@ -12,6 +12,10 @@ public class SellModel {
     public SellModel() {
     }
 
+    public SellModel(@NotBlank String id) {
+        this.id = id;
+    }
+
     public SellModel(@NotBlank String id, @Min(value = 0) int amount) {
         this.id = id;
         this.amount = amount;

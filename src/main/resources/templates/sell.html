@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Sell</title>
+</head>
+<body>
+<h1>sell product: <span th:text="${name}"></span></h1>
+<form th:action="@{/sell}" method="post" th:object="${sellModel}" action="#">
+
+    <input th:field="*{id}" th:value="*{id}"
+           type="hidden" id="id">
+    <span th:if="${#fields.hasErrors('id')}"
+          th:errors="*{id}"></span>
+
+
+    <div>
+        <label for="amount">amount</label>
+        <input th:field="*{amount}" th:value="*{amount}"
+               type="number" min="0" id="amount" placeholder="amount">
+        <span th:if="${#fields.hasErrors('amount')}"
+              th:errors="*{amount}"></span>
+    </div>
+
+
+    <button type="submit">Sell Product</button>
+    <a th:href="@{/}">cancel</a>
+</form>
+</body>
+</html>
